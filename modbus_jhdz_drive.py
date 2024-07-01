@@ -16,7 +16,7 @@ a python thread::
 # import the modbus libraries we need
 # --------------------------------------------------------------------------- #
 import argparse
-from pymodbus.server.async import StartTcpServer
+from pymodbus.server.async_io import StartTcpServer
 from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
@@ -104,14 +104,14 @@ def run_updating_server():
             list_co_context.append(1)
     # 模拟佳环高频电源modbus-tcp的模拟量输入
     list_ir_context=[]
-    for i in range(10):
-        list_ir_context.append(i+0)
+    for i in range(60000):
+        list_ir_context.append(i+3)
 
         
     # 模拟佳环高频电源modbus-tcp的模拟量输出
     list_hr_context=[]
-    for i in range(200):   #400011-400164 一共154点
-        list_hr_context.append(i+0)
+    for i in range(60000):   #400011-400164 一共154点
+        list_hr_context.append(i+1)
        
    
     #store = ModbusSlaveContext(
@@ -147,7 +147,7 @@ def run_updating_server():
     loop = LoopingCall(f=updating_writer, a=(context,))
     loop.start(time, now=False) # initially delay by time
     #StartTcpServer(context, identity=identity, address=("192.168.168.100", 5021))
-    StartTcpServer(context, identity=identity, address=(arg.server_ip, arg.server_port))
+    StartTcpServer(context=context, identity=identity, address=(arg.server_ip, arg.server_port))
 
 
 if __name__ == "__main__":
