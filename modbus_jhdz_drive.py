@@ -26,6 +26,7 @@ from pymodbus.transaction import ModbusRtuFramer, ModbusAsciiFramer
 # import the twisted libraries we need
 # --------------------------------------------------------------------------- #
 from twisted.internet.task import LoopingCall
+import threading
 
 # --------------------------------------------------------------------------- #
 # configure the service logging
@@ -33,10 +34,13 @@ from twisted.internet.task import LoopingCall
 import logging
 logging.basicConfig()
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 # --------------------------------------------------------------------------- #
 # define your callback process
 # --------------------------------------------------------------------------- #
+
+hold_register_count = 60001
+input_register_count = 60001
 
 
 def updating_writer(a):
@@ -60,29 +64,25 @@ def updating_writer(a):
     address = 0x00
     
     # 佳环高频电源modbus-tcp的模拟量输出
-    values = context[slave_id].getValues(hold_register, address, count=200)
+    values = context[slave_id].getValues(hold_register, address, count=hold_register_count)
     values = [v + 1 for v in values]
     log.debug("new values: " + str(values))
     context[slave_id].setValues(hold_register, address, values)
     
     # 模拟佳环高频电源modbus-tcp的开关量输出
     values = context[slave_id].getValues(coil, address, count=200)
-    values_new = []
-    for v in values:
-        if v ==0:
-            values_new.append(1)
-        else:
-            values_new.append(0)
+    values_new = [1 if v == 0 else 0 for v in values]
             
     log.debug("new values: " + str(values_new))
     
     context[slave_id].setValues(coil, address, values_new)
     
     # 佳环高频电源modbus-tcp的模拟量输入
-    values = context[slave_id].getValues(input_register, address, count=10)
+    values = context[slave_id].getValues(input_register, address, count=input_register_count)
     values = [v + 1 for v in values]
     log.debug("new values: " + str(values))
     context[slave_id].setValues(input_register, address, values)
+
 
 def run_updating_server():
     # ----------------------------------------------------------------------- # 
@@ -104,13 +104,13 @@ def run_updating_server():
             list_co_context.append(1)
     # 模拟佳环高频电源modbus-tcp的模拟量输入
     list_ir_context=[]
-    for i in range(60000):
+    for i in range(input_register_count):
         list_ir_context.append(i+3)
 
         
     # 模拟佳环高频电源modbus-tcp的模拟量输出
     list_hr_context=[]
-    for i in range(60000):   #400011-400164 一共154点
+    for i in range(hold_register_count):   #400011-400164 一共154点
         list_hr_context.append(i+1)
        
    
@@ -143,9 +143,16 @@ def run_updating_server():
     # ----------------------------------------------------------------------- # 
     # run the server you want
     # ----------------------------------------------------------------------- # 
-    time = 2  # 5 seconds delay
-    loop = LoopingCall(f=updating_writer, a=(context,))
-    loop.start(time, now=False) # initially delay by time
+    time = 1  # 5 seconds delay
+    # loop = LoopingCall(f=updating_writer, a=(context,))
+    # loop.start(time, now=True) # initially delay by time
+
+    def repeat():
+        updating_writer((context,))
+        threading.Timer(time, repeat).start()
+
+    repeat()
+
     #StartTcpServer(context, identity=identity, address=("192.168.168.100", 5021))
     StartTcpServer(context=context, identity=identity, address=(arg.server_ip, arg.server_port))
 
