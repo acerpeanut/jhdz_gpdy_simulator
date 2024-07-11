@@ -41,6 +41,7 @@ log.setLevel(logging.INFO)
 
 hold_register_count = 60001
 input_register_count = 60001
+max_value = 10000
 
 
 def updating_writer(a):
@@ -65,7 +66,7 @@ def updating_writer(a):
     
     # 佳环高频电源modbus-tcp的模拟量输出
     values = context[slave_id].getValues(hold_register, address, count=hold_register_count)
-    values = [v + 1 for v in values]
+    values = [(v + 1) % max_value for v in values]
     log.debug("new values: " + str(values))
     context[slave_id].setValues(hold_register, address, values)
     
@@ -79,7 +80,7 @@ def updating_writer(a):
     
     # 佳环高频电源modbus-tcp的模拟量输入
     values = context[slave_id].getValues(input_register, address, count=input_register_count)
-    values = [v + 1 for v in values]
+    values = [(v + 1) % max_value for v in values]
     log.debug("new values: " + str(values))
     context[slave_id].setValues(input_register, address, values)
 
@@ -105,13 +106,13 @@ def run_updating_server():
     # 模拟佳环高频电源modbus-tcp的模拟量输入
     list_ir_context=[]
     for i in range(input_register_count):
-        list_ir_context.append(i+3)
+        list_ir_context.append((i * 2 + 3) % max_value)
 
         
     # 模拟佳环高频电源modbus-tcp的模拟量输出
     list_hr_context=[]
     for i in range(hold_register_count):   #400011-400164 一共154点
-        list_hr_context.append(i+1)
+        list_hr_context.append((i + 1) % max_value)
        
    
     #store = ModbusSlaveContext(
